@@ -22,14 +22,20 @@ def extract_airport_data(input_location, output_location):
 	print("Reading from " + input_location)
 	print("Writing to " + output_location)
 
-def process_flight_dims():
-	return 1;
+def tranform_flight_data():
+	return 1
 
-def process_airport_dims():
-	return 1;
+def transform_airport_data():
+	return 1
 
-def process_flight_facts():
-	return 1;
+def load_flight_dims():
+	return 1
+
+def load_airport_dims():
+	return 1
+
+def load_flight_facts():
+	return 1
 
 def main():
 	print("Starting ETL")
@@ -42,22 +48,30 @@ def main():
 
 	airport_data_location = etl_config['INPUT']['DATA_LOCATION_AIRPORTS']
 
-	output_data_location = etl_config['OUTPUT']['DATA_LOCATION_OUTPUT']
+	extract_location = etl_config['OUTPUT']['DATA_LOCATION_EXTRACT']
+	transform_location = etl_config['OUTPUT']['DATA_LOCATION_TRANSFORM']
+	complete_location = etl_config['OUTPUT']['DATA_LOCATION_COMPLETE']
 
 	# Read in flight information.
-	extract_flight_data(flight_data_location, output_data_location)
+	extract_flight_data(flight_data_location, extract_location)
 
 	# Read in airport information.
-	extract_airport_data(airport_data_location, output_data_location)
+	extract_airport_data(airport_data_location, extract_location)
 
-	# Process flight dimensions.
-	process_flight_dims()
+	# Transform flight data.
+	transform_flight_data()
 
-	# Process airport dimensions.
-	process_airport_dims()
+	# Transform airport data.
+	tranform_airport_data()	
 
-	# Process flight facts.
-	process_flight_facts()
+	# Load flight dimensions.
+	load_flight_dims()
+
+	# Load airport dimensions.
+	load_airport_dims()
+
+	# Load flight facts.
+	load_flight_facts()
 
 
 if __name__ == "__main__":
