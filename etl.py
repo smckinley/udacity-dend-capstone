@@ -65,8 +65,6 @@ def transform_flight_data(input_location, output_location, spark_session):
 
 	df_transformed.write.mode('overwrite').parquet(output_location)
 
-	print("Flight data transform written to " + output_location)
-
 def transform_airport_data(input_location, output_location, spark_session):
 	spark = spark_session
 
@@ -76,17 +74,20 @@ def transform_airport_data(input_location, output_location, spark_session):
 
 	df = spark.read.parquet(input_location)
 
-	print(df.head())
-
 	df.createOrReplaceTempView('airport_data_extract_vw')
 
 	df_transformed = spark.sql("""
 		select 
-			*
+			cast(iata_code as string) as id,
+			cast(iso_country as string) as country,
+			cast(iso_region as string) as region,
+			cast(substr(coordinates, 1, instr(coordinates, ',') - 1) as double) as latitude,
+			cast(substr(coordinates, instr(coordinates, ',') + 1, length(coordinates)) as double) as longitude
 		from airport_data_extract_vw
+		where iata_code is not null
 		""")
 
-	print(df_transformed.head())
+	df_transformed.write.mode('overwrite').parquet(output_location)
 
 def load_flight_dims():
 	spark = spark_session
