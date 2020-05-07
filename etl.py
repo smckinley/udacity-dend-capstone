@@ -34,9 +34,9 @@ def extract_airport_data(input_location, output_location, spark_session):
 		for f in os.listdir(output_location):
 			os.remove(output_location + f)
 
-	df = spark.read.csv(input_location)
+	df = spark.read.format('csv').options(header='true').load(input_location)
 
-	df.write.mode('append').parquet(output_location)
+	df.write.mode('overwrite').parquet(output_location)
 
 def transform_flight_data(input_location, output_location, spark_session):
 	spark = spark_session
@@ -47,14 +47,46 @@ def transform_flight_data(input_location, output_location, spark_session):
 
 	df = spark.read.parquet(input_location)	
 
-	
-	
+	df.createOrReplaceTempView('flight_data_extract_vw')
+
+	df_transformed = spark.sql("""
+		select
+			cast(cicid as int) as id,
+			cast(i94yr as int) as year,
+			cast(i94mon as int) as month,
+			cast(i94port as string) as airport_code,
+			cast(i94addr as string) as city_abbrv,
+			cast(biryear as int) as birth_year,
+			cast(gender as string) as gender,
+			case when gender = 'M' then 1 else 0 end male_count,
+			case when gender = 'F' then 1 else 0 end female_count
+		from flight_data_extract_vw
+		""")
+
+	df_transformed.write.mode('overwrite').parquet(output_location)
+
+	print("Flight data transform written to " + output_location)
+
 def transform_airport_data(input_location, output_location, spark_session):
 	spark = spark_session
 
 	if os.path.exists(output_location):
 		for f in os.listdir(output_location):
 			os.remove(output_location + f)
+
+	df = spark.read.parquet(input_location)
+
+	print(df.head())
+
+	df.createOrReplaceTempView('airport_data_extract_vw')
+
+	df_transformed = spark.sql("""
+		select 
+			*
+		from airport_data_extract_vw
+		""")
+
+	print(df_transformed.head())
 
 def load_flight_dims():
 	spark = spark_session
@@ -98,28 +130,28 @@ def main():
 	complete_location = etl_config['OUTPUT']['DATA_LOCATION_COMPLETE']
 
 	# Read in flight information.
-	flight_data_extract_dir = extract_location + "/sas_data/"
-	extract_flight_data(
-		flight_data_location, 
-		flight_data_extract_dir, 
-		spark)
+	flight_data_extract_dir = extract_location + "sas_data/"
+	# extract_flight_data(
+	# 	flight_data_location, 
+	# 	flight_data_extract_dir, 
+	# 	spark)
 
 	# Read in airport information.
-	airport_data_extract_dir = extract_location + "/aiport_data/"
+	airport_data_extract_dir = extract_location + "airport_data/"
 	extract_airport_data(
 		airport_data_location,
 		airport_data_extract_dir,
 		spark)
 
 	# Transform flight data.
-	flight_data_transform_dir = transform_location + "/sas_data/"
+	flight_data_transform_dir = transform_location + "sas_data/"
 	transform_flight_data(
 		flight_data_extract_dir,
 		flight_data_transform_dir,
 		spark)
 
 	# Transform airport data.
-	airport_data_transform_dir = transform_location + "/airport_data/"
+	airport_data_transform_dir = transform_location + "airport_data/"
 	transform_airport_data(
 		airport_data_extract_dir,
 		airport_data_transform_dir,
