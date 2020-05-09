@@ -77,7 +77,7 @@ def transform_airport_data(input_location, output_location, spark_session):
 	df.createOrReplaceTempView('airport_data_extract_vw')
 
 	df_transformed = spark.sql("""
-		select 
+		select distinct
 			cast(iata_code as string) as id,
 			cast(iso_country as string) as country,
 			cast(iso_region as string) as region,
