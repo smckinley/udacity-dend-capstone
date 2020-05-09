@@ -78,7 +78,7 @@ def transform_airport_data(input_location, output_location, spark_session):
 
 	df_transformed = spark.sql("""
 		select distinct
-			cast(iata_code as string) as id,
+			cast(iata_code as string) as airport_code,
 			cast(iso_country as string) as country,
 			cast(iso_region as string) as region,
 			cast(substr(coordinates, 1, instr(coordinates, ',') - 1) as double) as latitude,
@@ -89,28 +89,76 @@ def transform_airport_data(input_location, output_location, spark_session):
 
 	df_transformed.write.mode('overwrite').parquet(output_location)
 
-def load_flight_dims():
+def load_flight_dims(input_location, output_location, spark_session):
 	spark = spark_session
 
 	if os.path.exists(output_location):
 		for f in os.listdir(output_location):
 			os.remove(output_location + f)
 
-def load_airport_dims():
+	df = spark.read.parquet(input_location)
+
+	df.createOrReplaceTempView('flight_data_transform_vw')
+
+	df_load = spark.sql("""
+		select
+			id,
+			year,
+			month,
+			airport_code,
+			city_abbrv,
+			birth_year,
+			gender
+		from flight_data_transform_vw
+		""")
+
+	df_load.write.mode('overwrite').parquet(output_location)
+
+
+def load_airport_dims(input_location, output_location, spark_session):
 	spark = spark_session
 
 	if os.path.exists(output_location):
 		for f in os.listdir(output_location):
 			os.remove(output_location + f)
 
-def load_flight_facts():
+	df = spark.read.parquet(input_location)
+
+	df.createOrReplaceTempView('airport_data_transform_vw')
+
+	df_load = spark.sql("""
+		select
+			airport_code,
+			country,
+			region,
+			latitude,
+			longitude
+		from airport_data_transform_vw
+		""")
+
+	df_load.write.mode('overwrite').parquet(output_location)
+
+def load_flight_facts(input_location, output_location, spark_session):
 	spark = spark_session
 
 	if os.path.exists(output_location):
 		for f in os.listdir(output_location):
 			os.remove(output_location + f)
 
+	df = spark.read.parquet(input_location)
 
+	df.createOrReplaceTempView('flight_data_transform_vw')
+
+	df_load = spark.sql("""
+		select
+			id,
+			airport_code,
+			male_count,
+			female_count
+		from flight_data_transform_vw
+		""")
+
+	df_load.write.mode('overwrite').parquet(output_location)
 
 def main():
 	print("Starting ETL")
@@ -159,14 +207,25 @@ def main():
 		spark)	
 
 	# Load flight dimensions.
-	#load_flight_dims()
+	flight_dims_load_dir = complete_location + "flight_dims/"
+	load_flight_dims(
+		flight_data_transform_dir,
+		flight_dims_load_dir,
+		spark)
 
 	# Load airport dimensions.
-	#load_airport_dims()
+	airport_dims_load_dir = complete_location + "airport_dims/"
+	load_airport_dims(
+		airport_data_transform_dir,
+		airport_dims_load_dir,
+		spark)
 
 	# Load flight facts.
-	#load_flight_facts()
-
+	flight_facts_load_dir = complete_location + "flight_facts/"
+	load_flight_facts(
+		flight_data_transform_dir,
+		flight_facts_load_dir,
+		spark)
 
 if __name__ == "__main__":
     main()
