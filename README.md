@@ -35,7 +35,10 @@ Flight Dimensions
 | YEAR | Year flight occurred |
 | MONTH | Integer month of year flight occurred |
 | AIRPORT_CODE | Alpha code identifying airport |
-
+| CITY_ABBRV | Abbreviated city name where airport is located |
+| BIRTH_YEAR | Birth year of traveler on travel day |
+| GENDER | Gender (M/F) of traveler on travel day |
+|--------|------------|
 
 
 # Additional Considerations
