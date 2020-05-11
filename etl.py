@@ -97,7 +97,8 @@ def transform_airport_data(input_location, output_location, spark_session):
     Keyword arguments:
     input_location -- the location of the extracted airport data
     output_location -- directory location for storing the transformed data
-    spark_	
+    spark_session -- a Spark session for processing the data
+	"""		
 	spark = spark_session
 
 	if os.path.exists(output_location):
@@ -122,6 +123,13 @@ def transform_airport_data(input_location, output_location, spark_session):
 	df_transformed.write.mode('overwrite').parquet(output_location)
 
 def load_flight_dims(input_location, output_location, spark_session):
+	"""Load flight dimensions into dimension table.
+
+    Keyword arguments:
+    input_location -- the location of the transformed flight data
+    output_location -- directory location for storing the dimensions
+    spark_session -- a Spark session for processing the data
+	"""		
 	spark = spark_session
 
 	if os.path.exists(output_location):
@@ -148,6 +156,13 @@ def load_flight_dims(input_location, output_location, spark_session):
 
 
 def load_airport_dims(input_location, output_location, spark_session):
+	"""Load airport dimensions into dimension table.
+
+    Keyword arguments:
+    input_location -- the location of the transformed airport data
+    output_location -- directory location for storing the dimensions
+    spark_session -- a Spark session for processing the data
+	"""		
 	spark = spark_session
 
 	if os.path.exists(output_location):
@@ -171,6 +186,13 @@ def load_airport_dims(input_location, output_location, spark_session):
 	df_load.write.mode('overwrite').parquet(output_location)
 
 def load_flight_facts(input_location, output_location, spark_session):
+	"""Load flight facts into facts table.
+
+    Keyword arguments:
+    input_location -- the location of the transformed flight data
+    output_location -- directory location for storing the facts
+    spark_session -- a Spark session for processing the data
+	"""		
 	spark = spark_session
 
 	if os.path.exists(output_location):
@@ -212,10 +234,10 @@ def main():
 
 	# Read in flight information.
 	flight_data_extract_dir = extract_location + "sas_data/"
-	# extract_flight_data(
-	# 	flight_data_location, 
-	# 	flight_data_extract_dir, 
-	# 	spark)
+	extract_flight_data(
+		flight_data_location, 
+		flight_data_extract_dir, 
+		spark)
 
 	# Read in airport information.
 	airport_data_extract_dir = extract_location + "airport_data/"
@@ -295,6 +317,22 @@ def main():
 	if df_test.count() > 0:
 		print("ERROR: Flights arriving at unidentified airports.")
 		df_test.show()	
+
+	# Sample analytical query.
+	df_flight_facts = spark.read.parquet(flight_facts_load_dir)
+
+	df_flight_facts.createOrReplaceTempView('flights')
+
+	df_analysis = spark.sql("""
+			select 
+				city_abbrv, 
+				sum(male_count) male_count,
+				sum(female_count) female_count
+			from flights
+			join f 
+			on f.id = flights.id
+			group by city_abbrv
+		""")
 
 	print("ETL complete.")
 
