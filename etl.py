@@ -1,9 +1,12 @@
+# ETL process for digesting and reporting on flight information.
+
 import pandas as pd
 import configparser
 import os
 from pyspark.sql import SparkSession
 
 def start_spark_session():
+	"""Start a Spark session and return the object for use."""
 	spark = SparkSession.builder\
 		.config("spark.jars.packages","saurfang:spark-sas7bdat:2.0.0-s_2.11")\
 		.enableHiveSupport().getOrCreate()
@@ -11,6 +14,14 @@ def start_spark_session():
 	return spark
 
 def extract_flight_data(input_location, output_location, spark_session):
+	"""Read flight data from the file location provided and load it into a 
+	staging table.
+
+    Keyword arguments:
+    input_location -- the location of the raw flight data
+    output_location -- directory location for storing the extracted data
+    spark_session -- a Spark session for processing the data
+	"""
 	spark = spark_session
 
 	if os.path.exists(output_location):
@@ -28,6 +39,14 @@ def extract_flight_data(input_location, output_location, spark_session):
 		break
 
 def extract_airport_data(input_location, output_location, spark_session):
+	"""Read airport from the file location provided and load it into a 
+	staging table.
+
+    Keyword arguments:
+    input_location -- the location of the raw airport data
+    output_location -- directory location for storing the extracted data
+    spark_session -- a Spark session for processing the data
+	"""	
 	spark = spark_session
 
 	if os.path.exists(output_location):
@@ -39,6 +58,13 @@ def extract_airport_data(input_location, output_location, spark_session):
 	df.write.mode('overwrite').parquet(output_location)
 
 def transform_flight_data(input_location, output_location, spark_session):
+	"""Transform flight data into analytical facts and dimensions.
+
+    Keyword arguments:
+    input_location -- the location of the extracted flight data
+    output_location -- directory location for storing the transformed data
+    spark_session -- a Spark session for processing the data
+	"""	
 	spark = spark_session
 
 	if os.path.exists(output_location):
@@ -66,6 +92,12 @@ def transform_flight_data(input_location, output_location, spark_session):
 	df_transformed.write.mode('overwrite').parquet(output_location)
 
 def transform_airport_data(input_location, output_location, spark_session):
+	"""Transform airport data into analytical facts and dimensions.
+
+    Keyword arguments:
+    input_location -- the location of the extracted airport data
+    output_location -- directory location for storing the transformed data
+    spark_	
 	spark = spark_session
 
 	if os.path.exists(output_location):
@@ -226,6 +258,46 @@ def main():
 		flight_data_transform_dir,
 		flight_facts_load_dir,
 		spark)
+
+	# Check 1: No duplicate airports
+	df = spark.read.parquet(airport_dims_load_dir)
+	df.createOrReplaceTempView('v')
+
+	df_test = spark.sql("""
+		select airport_code, count(*) duplicate_count
+		from v
+		group by airport_code
+		having count(*) > 1
+		""")
+
+	if df_test.count() > 0:
+		print("ERROR: Duplicate entries found for airport codes.")
+		df_test.show()
+
+	# Check 2: Flights arrived at unidentified airports
+	df_airports = spark.read.parquet(airport_dims_load_dir)
+	df_flights  = spark.read.parquet(flight_dims_load_dir)
+
+	df_airports.createOrReplaceTempView('v')
+	df_flights.createOrReplaceTempView('f')
+
+	df_test = spark.sql("""
+		select f.airport_code, count(*) n
+		from f
+		where not exists (
+			select 1
+			from v 
+			where v.airport_code = f.airport_code
+		)
+		group by f.airport_code
+		""")
+
+	if df_test.count() > 0:
+		print("ERROR: Flights arriving at unidentified airports.")
+		df_test.show()	
+
+	print("ETL complete.")
+
 
 if __name__ == "__main__":
     main()
