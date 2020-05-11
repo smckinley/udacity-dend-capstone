@@ -38,7 +38,24 @@ Flight Dimensions
 | CITY_ABBRV | Abbreviated city name where airport is located |
 | BIRTH_YEAR | Birth year of traveler on travel day |
 | GENDER | Gender (M/F) of traveler on travel day |
-|--------|------------|
+
+Airport Dimensions
+| Field | Definition |
+|-|-|
+| AIRPORT_CODE | Alpha code identifying airport |
+| COUNTRY | Country code of airport location |
+| REGION | Region airport is located in |
+| LATITUDE | Latitude of airport |
+| LONGITUDE | Longitude of airport |
+
+Flight Facts 
+| Field | Definition |
+|-|-|
+| ID | Flight ID |
+| AIRPORT_CODE | Airport code |
+| MALE_COUNT | A 1 or 0 indicating if the traveler was a male |
+| FEMALE_COUNT | A 1 or 0 indicating if the traveler was female |
+
 
 
 # Additional Considerations
